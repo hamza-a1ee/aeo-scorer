@@ -8,7 +8,7 @@ import { handleRoute, ok } from '@/server/api-response.util';
 import { isPublicHost } from '@/server/crawler/fetch-page.util';
 import { HttpError } from '@/server/http-error';
 import { startPipeline } from '@/server/pipeline/orchestrator';
-import { findTodayScan, insertScan } from '@/server/repositories/scan.repo';
+import { findTodayScan, insertScan, updateScan } from '@/server/repositories/scan.repo';
 import type { ICreateScanResponse } from '@/types/interfaces/scan.interface';
 import { normalizeInputUrl } from '@/utils/url.util';
 
@@ -26,6 +26,13 @@ export const POST = handleRoute(async req => {
 
   // One scan per domain per day: return today's scan if it exists.
   const existing = await findTodayScan(target.domain);
+  if (existing?.status === 'failed') {
+    // Retry a failed scan instead of locking the domain out until tomorrow.
+    // Finished stages are skipped, so this resumes from the stage that failed.
+    await updateScan(existing.id, { status: 'queued', error: null });
+    after(() => startPipeline(existing.id));
+    return ok<ICreateScanResponse>({ scanId: existing.id, shareToken: existing.share_token, status: 'queued', existing: true }, 'Retrying today’s scan');
+  }
   if (existing) {
     return ok<ICreateScanResponse>({ scanId: existing.id, shareToken: existing.share_token, status: existing.status, existing: true }, 'Already scanned today');
   }

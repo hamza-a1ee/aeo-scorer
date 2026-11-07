@@ -6,20 +6,43 @@ import { getEnv } from '@/lib/env';
 
 import { getGenAI, isRetryable, withRetry } from './gemini.client';
 
-/** Strips keys outside Gemini's JSON-schema subset. */
+/**
+ * Keys dropped before the schema reaches Gemini. Length and range limits make the
+ * served constraint too large ("too many states for serving"); zod still checks
+ * the reply after parsing.
+ */
+const DROPPED_KEYS = new Set([
+  '$schema',
+  '$id',
+  'additionalProperties',
+  'minItems',
+  'maxItems',
+  'minLength',
+  'maxLength',
+  'minimum',
+  'maximum',
+  'exclusiveMinimum',
+  'exclusiveMaximum',
+  'multipleOf',
+  'pattern',
+  'format',
+]);
+
+/** Strips keys outside what Gemini can serve. */
 function sanitize(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(sanitize);
   if (!node || typeof node !== 'object') return node;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(node)) {
-    if (k === '$schema' || k === 'additionalProperties' || k === '$id') continue;
+    if (DROPPED_KEYS.has(k)) continue;
     out[k] = sanitize(v);
   }
   return out;
 }
 
 export function toGeminiJsonSchema(schema: z.ZodType): Record<string, unknown> {
-  return sanitize(z.toJSONSchema(schema)) as Record<string, unknown>;
+  // io: 'input' describes what the model must send, before zod transforms run.
+  return sanitize(z.toJSONSchema(schema, { io: 'input' })) as Record<string, unknown>;
 }
 
 function extractJson(text: string): unknown {

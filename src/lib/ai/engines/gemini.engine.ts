@@ -9,7 +9,7 @@ import {
   ENGINE_SYSTEM_PROMPT,
   type IAnswerEngine,
 } from '../answer-engine.interface';
-import { getGenAI, withRetry } from '../gemini.client';
+import { getGenAI, isRetryable, withRetry } from '../gemini.client';
 
 interface IStepLike {
   type?: string;
@@ -22,17 +22,26 @@ export const geminiEngine: IAnswerEngine = {
   label: ENGINE_LABELS.gemini,
   isConfigured: () => !!getEnv().GEMINI_API_KEY,
   async ask(question) {
-    const model = getEnv().GEMINI_MODEL;
+    const env = getEnv();
     const started = Date.now();
-    const interaction = await withRetry(() =>
+    const askWith = (model: string) =>
       getGenAI().interactions.create({
         model,
         input: question,
         store: false,
         system_instruction: ENGINE_SYSTEM_PROMPT,
         tools: [{ type: 'google_search' }],
-      }),
-    );
+      });
+    let model = env.GEMINI_MODEL;
+    let interaction;
+    try {
+      interaction = await withRetry(() => askWith(model));
+    } catch (error) {
+      // Rate limit or used-up quota on the main model: answer with the fast one.
+      if (!isRetryable(error) || model === env.GEMINI_MODEL_FAST) throw error;
+      model = env.GEMINI_MODEL_FAST;
+      interaction = await withRetry(() => askWith(model), 1);
+    }
     const citations: TCitation[] = [];
     for (const step of (interaction.steps ?? []) as IStepLike[]) {
       if (step.type !== 'model_output') continue;

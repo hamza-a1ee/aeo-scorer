@@ -16,7 +16,12 @@ export function isRetryable(error: unknown): boolean {
   const e = error as { status?: number; code?: number; message?: string };
   const status = e?.status ?? e?.code;
   if (status === 429 || (typeof status === 'number' && status >= 500)) return true;
-  return /429|rate|quota|unavailable|overloaded|timeout|ECONNRESET|fetch failed/i.test(e?.message ?? '');
+  return /429|rate.?limit|quota|unavailable|overloaded|timeout|ECONNRESET|fetch failed/i.test(e?.message ?? '');
+}
+
+/** A used-up daily quota: retrying the same model today cannot succeed. */
+export function isDailyQuota(error: unknown): boolean {
+  return /per day|retry in \d+h/i.test((error as { message?: string })?.message ?? '');
 }
 
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, baseMs = 1500): Promise<T> {
@@ -26,7 +31,7 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = 2, baseMs = 1
       return await fn();
     } catch (error) {
       last = error;
-      if (attempt === retries || !isRetryable(error)) break;
+      if (attempt === retries || !isRetryable(error) || isDailyQuota(error)) break;
       await new Promise(r => setTimeout(r, baseMs * 2 ** attempt + Math.random() * 400));
     }
   }
