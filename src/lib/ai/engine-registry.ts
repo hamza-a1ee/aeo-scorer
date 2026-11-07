@@ -4,10 +4,11 @@ import type { TEngine } from '@/types/enums/answer.enum';
 
 import type { IAnswerEngine } from './answer-engine.interface';
 import { geminiEngine } from './engines/gemini.engine';
-import { openaiEngine } from './engines/openai.engine';
-import { perplexityEngine } from './engines/perplexity.engine';
+// Gemini only for now. Re-enable the other engines by uncommenting these.
+// import { openaiEngine } from './engines/openai.engine';
+// import { perplexityEngine } from './engines/perplexity.engine';
 
-const ALL: IAnswerEngine[] = [geminiEngine, openaiEngine, perplexityEngine];
+const ALL: IAnswerEngine[] = [geminiEngine /* , openaiEngine, perplexityEngine */];
 
 /** Engines with an API key, in report order. */
 export function getConfiguredEngines(): IAnswerEngine[] {

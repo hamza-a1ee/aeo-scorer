@@ -6,27 +6,26 @@ import { SAMPLE_ID } from './app-routes.constant';
 
 /* Tallybook demo data, taken from the spec's Report and Fix artboards. */
 
-const ENGINES: TEngine[] = ['gemini', 'chatgpt', 'perplexity'];
+// Gemini only for now; the other engines are disabled in engine-registry.ts.
+const ENGINES: TEngine[] = ['gemini'];
 const LABEL: Record<TEngine, string> = { gemini: 'Gemini', chatgpt: 'ChatGPT', perplexity: 'Perplexity' };
 
 let qid = 0;
 const gap = (
   question: string,
   intent: TIntent,
-  pos: TPosition | [TPosition, TPosition, TPosition],
+  pos: TPosition,
   cited: string | null,
   shouldCite: string | null,
   why: string,
 ): IGapRow => {
-  const list = Array.isArray(pos) ? pos : [pos, pos, pos];
-  const rank = { absent: 0, listed: 1, first: 2 };
   return {
     questionId: ++qid,
     question,
     intent,
     doubled: intent === 'category' || intent === 'task',
-    positions: ENGINES.map((e, i) => ({ engine: e, label: LABEL[e], position: list[i] })),
-    worst: [...list].sort((a, b) => rank[a] - rank[b])[0],
+    positions: ENGINES.map(e => ({ engine: e, label: LABEL[e], position: pos })),
+    worst: pos,
     cited,
     shouldCite,
     why,
@@ -46,12 +45,12 @@ const GAPS: IGapRow[] = [
   gap('Tallybook vs InvoiceKit', 'comparison', 'absent', null, 'No page covers this', 'No comparison page for InvoiceKit.'),
   gap('Ledgerly alternatives for freelancers', 'comparison', 'absent', null, '/compare/ledgerly', 'Comparison page has no facts table.'),
   gap('Tallybook complaints', 'reputation', 'absent', null, null, 'Engines had too little data and said so.'),
-  gap('what is Tallybook', 'definition', ['first', 'listed', 'first'], '/blog/launch-2024', '/', 'Engine cited an old blog post because home has no definition.'),
+  gap('what is Tallybook', 'definition', 'first', '/blog/launch-2024', '/', 'Engine cited an old blog post because home has no definition.'),
   gap('Tallybook vs Ledgerly', 'comparison', 'listed', null, '/compare/ledgerly', 'Comparison page exists but has no facts table.'),
-  gap('how to invoice a client in euros from the US', 'task', ['listed', 'listed', 'first'], '/features/currency', '/features/currency', 'Cited, but listed after two competitors.'),
+  gap('how to invoice a client in euros from the US', 'task', 'listed', '/features/currency', '/features/currency', 'Cited, but listed after two competitors.'),
   gap('what does Tallybook do', 'definition', 'first', '/', '/', 'Answered from the home page title.'),
   gap('is Tallybook free', 'definition', 'listed', '/pricing', '/pricing', 'Quoted the $15 monthly price only.'),
-  gap('does Tallybook support recurring invoices', 'feature', 'listed', null, '/features/recurring', 'ChatGPT said recurring invoices are unsupported.'),
+  gap('does Tallybook support recurring invoices', 'feature', 'listed', null, '/features/recurring', 'Gemini said recurring invoices are unsupported.'),
   gap('Tallybook reviews', 'reputation', 'first', null, null, 'Quoted G2 and the App Store.'),
   gap('is Tallybook any good', 'reputation', 'listed', null, null, 'Summarised Reddit threads.'),
 ];
@@ -73,7 +72,7 @@ const SUMMARIES: IFixSummary[] = [
   summary(3, 'feature_summary', 'Publish a page on automatic payment reminders', 4, 'hours', '/features/reminders', 'Absent from 3 task questions about reminders', 'Absent from 3 task questions about reminders. Your feature page is 40 words long.'),
   summary(4, 'product_jsonld', 'Add Product and Offer JSON-LD to /pricing', 3, 'minutes', '/pricing', 'Pricing has no machine-readable prices', '/pricing has no machine-readable prices, so engines guess them from text. 2 answers got your price wrong.'),
   summary(5, 'llms_txt', 'Publish an llms.txt file', 3, 'minutes', '/llms.txt', 'File missing at site root', 'No /llms.txt at the site root. It hands engines a plain summary and your key pages.'),
-  summary(6, 'feature_summary', 'Correct what engines say about Recurring invoices', 3, 'hours', '/features/recurring', 'Engine said recurring invoices are unsupported', 'ChatGPT said “Tallybook does not support recurring invoices.” Your site says: Yes, weekly, monthly or custom.'),
+  summary(6, 'feature_summary', 'Correct what engines say about Recurring invoices', 3, 'hours', '/features/recurring', 'Engine said recurring invoices are unsupported', 'Gemini said “Tallybook does not support recurring invoices.” Your site says: Yes, weekly, monthly or custom.'),
   summary(7, 'rating_fix', 'Show your real App Store rating on /reviews', 2, 'hours', '/reviews', 'App Store rating quoted as 3.9, real 4.4', 'Engines quote your App Store rating as 3.9; the real rating is 4.4.'),
   summary(8, 'directory_checklist', 'List Tallybook on Capterra and Trustpilot', 2, 'days', 'external', 'No Capterra or Trustpilot listing', 'Engines lean on review sites and roundups for category questions. You have no Capterra or Trustpilot listing.'),
 ];
@@ -137,7 +136,7 @@ const detail: Record<number, Omit<IFix, keyof IFixSummary>> = {
     codeBlock: null,
     codeLang: null,
     codeTitle: null,
-    gapDetail: 'Asked “how to send a late payment reminder automatically”, all three engines named Ledgerly and InvoiceKit. Your reminders page is 40 words with no steps.',
+    gapDetail: 'Asked “how to send a late payment reminder automatically”, Gemini named Ledgerly and InvoiceKit. Your reminders page is 40 words with no steps.',
     unconfirmedCount: 1,
     regenerations: 0,
   },
@@ -151,7 +150,7 @@ const detail: Record<number, Omit<IFix, keyof IFixSummary>> = {
     codeBlock: JSONLD,
     codeLang: 'json',
     codeTitle: 'SoftwareApplication + Offer JSON-LD',
-    gapDetail: 'Asked “how much does Tallybook cost”, ChatGPT said Pro costs $15 per month. The $12 annual price is in a client-side table engines cannot read.',
+    gapDetail: 'Asked “how much does Tallybook cost”, Gemini said Pro costs $15 per month. The $12 annual price is in a client-side table engines cannot read.',
     unconfirmedCount: 1,
     regenerations: 0,
   },
@@ -180,7 +179,7 @@ const detail: Record<number, Omit<IFix, keyof IFixSummary>> = {
     codeBlock: null,
     codeLang: null,
     codeTitle: null,
-    gapDetail: 'Asked “does Tallybook support recurring invoices”, ChatGPT said it does not. Your page heading reads “Set it and forget it” and never names the feature.',
+    gapDetail: 'Asked “does Tallybook support recurring invoices”, Gemini said it does not. Your page heading reads “Set it and forget it” and never names the feature.',
     unconfirmedCount: 0,
     regenerations: 0,
   },
@@ -241,8 +240,6 @@ export const SAMPLE_REPORT: IReport = {
     ],
     byEngine: [
       { engine: 'gemini', label: 'Gemini', total: 58 },
-      { engine: 'chatgpt', label: 'ChatGPT', total: 51 },
-      { engine: 'perplexity', label: 'Perplexity', total: 65 },
     ],
   },
   topFixes: SUMMARIES.filter(f => f.isTop3),
@@ -252,30 +249,28 @@ export const SAMPLE_REPORT: IReport = {
   },
   citations: {
     engines: [
-      { engine: 'perplexity', label: 'Perplexity', rate: 40, cited: 8, total: 20, topPage: '/pricing', isTop: true },
       { engine: 'gemini', label: 'Gemini', rate: 30, cited: 6, total: 20, topPage: '/', isTop: false },
-      { engine: 'chatgpt', label: 'ChatGPT', rate: 15, cited: 3, total: 20, topPage: '/blog/launch-2024', isTop: false },
     ],
     sources: [
-      { key: 'your_site', label: 'Your site', byEngine: { gemini: 30, chatgpt: 15, perplexity: 40 } },
-      { key: 'competitor_sites', label: 'Competitor sites', byEngine: { gemini: 25, chatgpt: 30, perplexity: 20 } },
-      { key: 'reddit_forums', label: 'Reddit and forums', byEngine: { gemini: 20, chatgpt: 25, perplexity: 15 } },
-      { key: 'review_sites', label: 'Review sites (G2, Capterra)', byEngine: { gemini: 15, chatgpt: 20, perplexity: 10 } },
-      { key: 'roundups', label: 'Roundups and directories', byEngine: { gemini: 5, chatgpt: 5, perplexity: 10 } },
-      { key: 'other', label: 'Other', byEngine: { gemini: 5, chatgpt: 5, perplexity: 5 } },
+      { key: 'your_site', label: 'Your site', byEngine: { gemini: 30 } },
+      { key: 'competitor_sites', label: 'Competitor sites', byEngine: { gemini: 25 } },
+      { key: 'reddit_forums', label: 'Reddit and forums', byEngine: { gemini: 20 } },
+      { key: 'review_sites', label: 'Review sites (G2, Capterra)', byEngine: { gemini: 15 } },
+      { key: 'roundups', label: 'Roundups and directories', byEngine: { gemini: 5 } },
+      { key: 'other', label: 'Other', byEngine: { gemini: 5 } },
     ],
     pages: [
-      { route: '/pricing', pct: 38, note: 'Cited by Perplexity and Gemini', flagged: false },
-      { route: '/', pct: 27, note: 'Cited by all three', flagged: false },
-      { route: '/blog/launch-2024', pct: 20, note: 'Stale post from 2024, describes you as time tracking', flagged: true },
-      { route: '/features/recurring', pct: 15, note: 'Cited by Perplexity only', flagged: false },
+      { route: '/', pct: 33, note: 'Cited for definition questions', flagged: false },
+      { route: '/pricing', pct: 33, note: 'Cited for price questions', flagged: false },
+      { route: '/blog/launch-2024', pct: 17, note: 'Stale post from 2024, describes you as time tracking', flagged: true },
+      { route: '/features/currency', pct: 17, note: 'Cited for the euros question', flagged: false },
     ],
   },
   accuracy: {
     summary: '31 claims about Tallybook: 24 correct, 4 wrong, 3 unverifiable. Wrong pricing and feature claims cost double.',
     wrong: [
-      { kind: 'pricing', doubled: true, said: 'Tallybook Pro costs $15 per month.', engineLabel: 'ChatGPT', question: 'how much does Tallybook cost', truth: '$12/month billed annually; $15 month-to-month.', source: '/pricing', correction: 'State both prices in one sentence in raw HTML, and add Offer JSON-LD for each.' },
-      { kind: 'feature', doubled: true, said: 'Tallybook does not support recurring invoices.', engineLabel: 'ChatGPT', question: 'does Tallybook support recurring invoices', truth: 'Recurring invoices on any schedule.', source: '/features/recurring', correction: 'Replace the heading “Set it and forget it” with “Recurring invoices” and open with one plain sentence.' },
+      { kind: 'pricing', doubled: true, said: 'Tallybook Pro costs $15 per month.', engineLabel: 'Gemini', question: 'how much does Tallybook cost', truth: '$12/month billed annually; $15 month-to-month.', source: '/pricing', correction: 'State both prices in one sentence in raw HTML, and add Offer JSON-LD for each.' },
+      { kind: 'feature', doubled: true, said: 'Tallybook does not support recurring invoices.', engineLabel: 'Gemini', question: 'does Tallybook support recurring invoices', truth: 'Recurring invoices on any schedule.', source: '/features/recurring', correction: 'Replace the heading “Set it and forget it” with “Recurring invoices” and open with one plain sentence.' },
       { kind: 'platform', doubled: false, said: 'Tallybook is available on iOS and Android.', engineLabel: 'Gemini', question: 'Tallybook mobile app', truth: 'Web and iOS only.', source: '/download', correction: 'Add “There is no Android app yet.” to /download.' },
     ],
   },
@@ -356,7 +351,7 @@ export const SAMPLE_REPORT: IReport = {
   },
   fixes: SUMMARIES,
   runDetails: [
-    { label: 'Engines', value: 'Gemini, ChatGPT, Perplexity' },
+    { label: 'Engines', value: 'Gemini' },
     { label: 'Questions', value: '20 · 6 intents' },
     { label: 'Routes crawled', value: '38 of 50 cap' },
     { label: 'Passes', value: '1 · snapshot' },

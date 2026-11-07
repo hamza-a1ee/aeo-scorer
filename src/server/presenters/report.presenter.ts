@@ -111,7 +111,8 @@ export function buildReport(token: string, data: IScanData, score: TScoreRow, fi
     };
   });
   const best = Math.max(0, ...engineCites.map(e => e.rate));
-  engineCites.forEach(e => (e.isTop = best > 0 && e.rate === best));
+  // "Cites you most" only means something when there are engines to compare.
+  engineCites.forEach(e => (e.isTop = engineCites.length > 1 && best > 0 && e.rate === best));
   engineCites.sort((a, b) => b.rate - a.rate);
 
   const sources = SOURCE_CLASSES.map(key => ({

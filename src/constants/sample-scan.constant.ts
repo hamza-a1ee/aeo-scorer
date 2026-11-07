@@ -37,7 +37,7 @@ export function sampleScanStatus(): IScanStatus {
     answersProgress: { done: 12, total: 20, engineLabel: 'Gemini' },
     early: { routesCrawled: 38, siteHealth: 16, botsBlocked: 2 },
     shareToken: SAMPLE_ID,
-    engines: ['gemini', 'chatgpt', 'perplexity'],
+    engines: ['gemini'],
     error: null,
   };
 }
