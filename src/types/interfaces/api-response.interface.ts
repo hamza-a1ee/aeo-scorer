@@ -10,8 +10,3 @@ export interface IAPIResponse<T = unknown> {
     limit: number;
   };
 }
-
-export interface IPaginationPayload {
-  limit: number;
-  page: number;
-}

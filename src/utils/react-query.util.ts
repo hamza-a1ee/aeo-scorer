@@ -1,11 +1,12 @@
-import toast from "react-hot-toast";
-import { parseError } from "./axios.util";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
-export function throwError(key: string = "React query") {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (error: any) => {
-    toast.error(parseError(error));
+import { parseError } from './axios.util';
+
+/** onError handler for mutations: shows the API message as a toast. */
+export function throwError(title: string = 'Request failed') {
+  return (error: unknown) => {
+    toast.error(title, { description: parseError(error) });
   };
 }
 
@@ -13,7 +14,7 @@ export function getQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 1000 * 60 * 5,
         refetchOnMount: false,
       },
     },
